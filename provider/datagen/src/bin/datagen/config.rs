@@ -124,8 +124,6 @@ pub enum Export {
     FileSystem {
         path: PathBuf,
         syntax: FsSyntax,
-        #[serde(default, skip_serializing_if = "is_default")]
-        fingerprint: bool,
     },
     Blob {
         path: PathBuf,
@@ -140,9 +138,6 @@ pub enum Export {
             rename = "useSeparateCrates"
         )]
         use_separate_crates: bool,
-        #[doc(hidden)] // we don't want this on the JSON API, but the CLI API goes through this struct
-        #[serde(default, skip_serializing, skip_deserializing)]
-        insert_feature_gates: bool,
     },
 }
 

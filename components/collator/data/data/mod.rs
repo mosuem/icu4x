@@ -30,6 +30,3 @@ macro_rules! impl_any_provider {
         }
     };
 }
-#[clippy::msrv = "1.67"]
-pub struct BakedDataProvider;
-impl_data_provider!(BakedDataProvider);
