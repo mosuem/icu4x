@@ -4,11 +4,41 @@
 
 #![allow(deprecated)]
 
-use crate::source::*;
-use crate::transform::cldr::source::CldrCache;
+mod calendar;
+mod characters;
+mod cldr_serde;
+mod collator;
+mod core;
+#[cfg(feature = "icu_singlenumberformatter")]
+mod currency;
+mod datetime;
+mod decimal;
+#[cfg(feature = "icu_displaynames")]
+mod displaynames;
+mod fallback;
+mod list;
+mod locale_canonicalizer;
+mod normalizer;
+mod plurals;
+#[cfg(feature = "icu_relativetime")]
+mod relativetime;
+pub(crate) mod segmenter;
+mod time_zones;
+#[cfg(feature = "icu_transliterate")]
+mod transforms;
+mod ucase;
+#[cfg(feature = "icu_unitsconversion")]
+mod units;
+mod uprops;
+
+use crate::abstract_fs::*;
 use crate::{CollationHanDatabase, CoverageLevel};
+use cldr_serde::CldrCache;
+use icu_provider::datagen::*;
 use icu_provider::prelude::*;
+use elsa::sync::FrozenMap;
 use std::fmt::Debug;
+use std::any::Any;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -70,7 +100,7 @@ impl DatagenProvider {
             .get_or_init(|| {
                 // This is equivalent for the files defined in `tools/testdata-scripts/globs.rs.data`.
                 let data_root =
-                    std::path::Path::new(core::env!("CARGO_MANIFEST_DIR")).join("tests/data");
+                    std::path::Path::new(std::env!("CARGO_MANIFEST_DIR")).join("tests/data");
                 Self::new_custom()
                     .with_cldr(data_root.join("cldr"))
                     .unwrap()
@@ -223,21 +253,21 @@ impl DatagenProvider {
         e == Self::MISSING_SEGMENTER_LSTM_ERROR
     }
 
-    pub(crate) fn cldr(&self) -> Result<&CldrCache, DataError> {
+    fn cldr(&self) -> Result<&CldrCache, DataError> {
         self.source
             .cldr_paths
             .as_deref()
             .ok_or(Self::MISSING_CLDR_ERROR)
     }
 
-    pub(crate) fn icuexport(&self) -> Result<&SerdeCache, DataError> {
+    fn icuexport(&self) -> Result<&SerdeCache, DataError> {
         self.source
             .icuexport_paths
             .as_deref()
             .ok_or(Self::MISSING_ICUEXPORT_ERROR)
     }
 
-    pub(crate) fn segmenter_lstm(&self) -> Result<&SerdeCache, DataError> {
+    fn segmenter_lstm(&self) -> Result<&SerdeCache, DataError> {
         self.source
             .segmenter_lstm_paths
             .as_deref()
@@ -264,11 +294,11 @@ impl DatagenProvider {
         }
     }
 
-    pub(crate) fn trie_type(&self) -> TrieType {
+    fn trie_type(&self) -> TrieType {
         self.source.trie_type
     }
 
-    pub(crate) fn collation_han_database(&self) -> CollationHanDatabase {
+    fn collation_han_database(&self) -> CollationHanDatabase {
         self.source.collation_han_database
     }
 
@@ -278,6 +308,79 @@ impl DatagenProvider {
         levels: impl IntoIterator<Item = CoverageLevel>,
     ) -> Result<impl IntoIterator<Item = icu_locid::LanguageIdentifier>, DataError> {
         self.cldr()?.locales(levels)
+    }
+}
+
+struct SerdeCache {
+    root: AbstractFs,
+    cache: FrozenMap<String, Box<dyn Any + Send + Sync>>,
+}
+
+impl Debug for SerdeCache {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SerdeCache")
+            .field("root", &self.root)
+            // skip formatting the cache
+            .finish()
+    }
+}
+
+impl SerdeCache {
+    pub fn new(root: AbstractFs) -> Self {
+        Self {
+            root,
+            cache: FrozenMap::new(),
+        }
+    }
+
+    fn read_and_parse<S>(
+        &self,
+        path: &str,
+        parser: fn(&[u8]) -> Result<S, DataError>,
+    ) -> Result<&S, DataError>
+    where
+        for<'de> S: serde::Deserialize<'de> + 'static + Send + Sync,
+    {
+        match self.cache.get(path) {
+            Some(x) => x,
+            None => self.cache.insert(
+                path.to_string(),
+                Box::new(
+                    parser(&self.root.read_to_buf(path)?)
+                        .map_err(|e| e.with_path_context(&path))?,
+                ),
+            ),
+        }
+        .downcast_ref::<S>()
+        .ok_or_else(|| DataError::custom("Cache error").with_type_context::<S>())
+    }
+
+    pub fn read_and_parse_json<S>(&self, path: &str) -> Result<&S, DataError>
+    where
+        for<'de> S: serde::Deserialize<'de> + 'static + Send + Sync,
+    {
+        self.read_and_parse(path, |bytes| {
+            serde_json::from_slice(bytes)
+                .map_err(|e| DataError::custom("JSON deserialize").with_display_context(&e))
+        })
+    }
+
+    pub fn read_and_parse_toml<S>(&self, path: &str) -> Result<&S, DataError>
+    where
+        for<'de> S: serde::Deserialize<'de> + 'static + Send + Sync,
+    {
+        self.read_and_parse(path, |bytes| {
+            toml::from_slice(bytes)
+                .map_err(|e| DataError::custom("TOML deserialize").with_display_context(&e))
+        })
+    }
+
+    pub fn list(&self, path: &str) -> Result<impl Iterator<Item = String>, DataError> {
+        self.root.list(path)
+    }
+
+    pub fn file_exists(&self, path: &str) -> Result<bool, DataError> {
+        self.root.file_exists(path)
     }
 }
 
@@ -304,6 +407,46 @@ impl std::fmt::Display for TrieType {
     }
 }
 
+impl DatagenProvider {
+    fn check_req<M: KeyedDataMarker>(&self, req: DataRequest) -> Result<(), DataError>
+    where
+        DatagenProvider: IterableDataProvider<M>,
+    {
+        if <M as KeyedDataMarker>::KEY.metadata().singleton && !req.locale.is_empty() {
+            Err(DataErrorKind::ExtraneousLocale)
+        } else if !self.supported_locales()?.contains(req.locale) {
+            Err(DataErrorKind::MissingLocale)
+        } else {
+            Ok(())
+        }
+        .map_err(|e| e.with_req(<M as KeyedDataMarker>::KEY, req))
+    }
+}
+
+#[test]
+fn test_missing_locale() {
+    use icu_locid::langid;
+    use icu_provider::hello_world::*;
+
+    let provider = DatagenProvider::new_testing();
+    assert!(DataProvider::<HelloWorldV1Marker>::load(
+        &provider,
+        DataRequest {
+            locale: &langid!("fi").into(),
+            metadata: Default::default()
+        }
+    )
+    .is_ok());
+    assert!(DataProvider::<HelloWorldV1Marker>::load(
+        &provider,
+        DataRequest {
+            locale: &langid!("arc").into(),
+            metadata: Default::default()
+        }
+    )
+    .is_err());
+}
+
 // SEMVER GRAVEYARD
 
 /// Bag of options for [`datagen`](crate::datagen).
@@ -324,7 +467,7 @@ pub struct SourceData {
     collation_han_database: CollationHanDatabase,
     #[cfg(feature = "legacy_api")]
     // populated if constructed through `SourceData` constructor only
-    pub(crate) icuexport_dictionary_fallback: Option<Arc<SerdeCache>>,
+    icuexport_dictionary_fallback: Option<Arc<SerdeCache>>,
     #[cfg(feature = "legacy_api")]
     pub(crate) collations: Vec<String>,
 }

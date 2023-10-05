@@ -427,14 +427,14 @@ fn select_locales_for_key(
         || key == icu_segmenter::provider::DictionaryForWordLineExtendedV1Marker::KEY
     {
         result.retain(|locale| {
-            let model = crate::transform::segmenter::dictionary::data_locale_to_model_name(locale);
+            let model = crate::provider::segmenter::dictionary::data_locale_to_model_name(locale);
             segmenter_models.iter().any(|m| Some(m.as_ref()) == model)
         });
         // Don't perform additional locale filtering
         return Ok(result);
     } else if key == icu_segmenter::provider::LstmForWordLineAutoV1Marker::KEY {
         result.retain(|locale| {
-            let model = crate::transform::segmenter::lstm::data_locale_to_model_name(locale);
+            let model = crate::provider::segmenter::lstm::data_locale_to_model_name(locale);
             segmenter_models.iter().any(|m| Some(m.as_ref()) == model)
         });
         // Don't perform additional locale filtering

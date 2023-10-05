@@ -138,8 +138,7 @@
 mod driver;
 mod provider;
 mod registry;
-mod source;
-mod transform;
+mod abstract_fs;
 
 pub use driver::DatagenDriver;
 pub use provider::DatagenProvider;
@@ -569,12 +568,12 @@ pub fn datagen(
                 for locale in locales {
                     let locale = locale.into();
                     if let Some(model) =
-                        transform::segmenter::lstm::data_locale_to_model_name(&locale)
+                        provider::segmenter::lstm::data_locale_to_model_name(&locale)
                     {
                         models.push(model.into());
                     }
                     if let Some(model) =
-                        transform::segmenter::dictionary::data_locale_to_model_name(&locale)
+                        provider::segmenter::dictionary::data_locale_to_model_name(&locale)
                     {
                         models.push(model.into());
                     }
