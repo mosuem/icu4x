@@ -13,10 +13,10 @@ final _callocFree = Finalizer(ffi2.calloc.free);
 
 /// An iterator over code point ranges, produced by `ICU4XCodePointSetData` or
 /// one of the `ICU4XCodePointMapData` types
-class CodePointRangeIterator implements ffi.Finalizable {
+class CodePointRangeIteratorImpl implements ffi.Finalizable {
   final ffi.Pointer<ffi.Opaque> _underlying;
 
-  CodePointRangeIterator._(this._underlying) {
+  CodePointRangeIteratorImpl._(this._underlying) {
     _finalizer.attach(this, _underlying.cast());
   }
 
@@ -1313,10 +1313,10 @@ class ICU4XCodePointMapData16 implements ffi.Finalizable {
   /// Produces an iterator over ranges of code points that map to `value`
   ///
   /// See the [Rust documentation for `iter_ranges_for_value`](https://docs.rs/icu/latest/icu/properties/maps/struct.CodePointMapDataBorrowed.html#method.iter_ranges_for_value) for more information.
-  CodePointRangeIterator iterRangesForValue(int value) {
+  CodePointRangeIteratorImpl iterRangesForValue(int value) {
     final result =
         _ICU4XCodePointMapData16_iter_ranges_for_value(_underlying, value);
-    return CodePointRangeIterator._(result);
+    return CodePointRangeIteratorImpl._(result);
   }
 
   // ignore: non_constant_identifier_names
@@ -1331,10 +1331,10 @@ class ICU4XCodePointMapData16 implements ffi.Finalizable {
   /// Produces an iterator over ranges of code points that do not map to `value`
   ///
   /// See the [Rust documentation for `iter_ranges_for_value_complemented`](https://docs.rs/icu/latest/icu/properties/maps/struct.CodePointMapDataBorrowed.html#method.iter_ranges_for_value_complemented) for more information.
-  CodePointRangeIterator iterRangesForValueComplemented(int value) {
+  CodePointRangeIteratorImpl iterRangesForValueComplemented(int value) {
     final result = _ICU4XCodePointMapData16_iter_ranges_for_value_complemented(
         _underlying, value);
-    return CodePointRangeIterator._(result);
+    return CodePointRangeIteratorImpl._(result);
   }
 
   // ignore: non_constant_identifier_names
@@ -1448,10 +1448,10 @@ class ICU4XCodePointMapData8 implements ffi.Finalizable {
   /// Produces an iterator over ranges of code points that map to `value`
   ///
   /// See the [Rust documentation for `iter_ranges_for_value`](https://docs.rs/icu/latest/icu/properties/maps/struct.CodePointMapDataBorrowed.html#method.iter_ranges_for_value) for more information.
-  CodePointRangeIterator iterRangesForValue(int value) {
+  CodePointRangeIteratorImpl iterRangesForValue(int value) {
     final result =
         _ICU4XCodePointMapData8_iter_ranges_for_value(_underlying, value);
-    return CodePointRangeIterator._(result);
+    return CodePointRangeIteratorImpl._(result);
   }
 
   // ignore: non_constant_identifier_names
@@ -1466,10 +1466,10 @@ class ICU4XCodePointMapData8 implements ffi.Finalizable {
   /// Produces an iterator over ranges of code points that do not map to `value`
   ///
   /// See the [Rust documentation for `iter_ranges_for_value_complemented`](https://docs.rs/icu/latest/icu/properties/maps/struct.CodePointMapDataBorrowed.html#method.iter_ranges_for_value_complemented) for more information.
-  CodePointRangeIterator iterRangesForValueComplemented(int value) {
+  CodePointRangeIteratorImpl iterRangesForValueComplemented(int value) {
     final result = _ICU4XCodePointMapData8_iter_ranges_for_value_complemented(
         _underlying, value);
-    return CodePointRangeIterator._(result);
+    return CodePointRangeIteratorImpl._(result);
   }
 
   // ignore: non_constant_identifier_names
@@ -1493,10 +1493,10 @@ class ICU4XCodePointMapData8 implements ffi.Finalizable {
   /// other maps will have unpredictable results
   ///
   /// See the [Rust documentation for `iter_ranges_for_group`](https://docs.rs/icu/latest/icu/properties/maps/struct.CodePointMapDataBorrowed.html#method.iter_ranges_for_group) for more information.
-  CodePointRangeIterator iterRangesForMask(int mask) {
+  CodePointRangeIteratorImpl iterRangesForMask(int mask) {
     final result =
         _ICU4XCodePointMapData8_iter_ranges_for_mask(_underlying, mask);
-    return CodePointRangeIterator._(result);
+    return CodePointRangeIteratorImpl._(result);
   }
 
   // ignore: non_constant_identifier_names
@@ -2002,9 +2002,9 @@ class ICU4XCodePointSetData implements ffi.Finalizable {
   /// Produces an iterator over ranges of code points contained in this set
   ///
   /// See the [Rust documentation for `iter_ranges`](https://docs.rs/icu/latest/icu/properties/sets/struct.CodePointSetDataBorrowed.html#method.iter_ranges) for more information.
-  CodePointRangeIterator get iterRanges {
+  CodePointRangeIteratorImpl get iterRanges {
     final result = _ICU4XCodePointSetData_iter_ranges(_underlying);
-    return CodePointRangeIterator._(result);
+    return CodePointRangeIteratorImpl._(result);
   }
 
   // ignore: non_constant_identifier_names
@@ -2018,9 +2018,9 @@ class ICU4XCodePointSetData implements ffi.Finalizable {
   /// Produces an iterator over ranges of code points not contained in this set
   ///
   /// See the [Rust documentation for `iter_ranges_complemented`](https://docs.rs/icu/latest/icu/properties/sets/struct.CodePointSetDataBorrowed.html#method.iter_ranges_complemented) for more information.
-  CodePointRangeIterator get iterRangesComplemented {
+  CodePointRangeIteratorImpl get iterRangesComplemented {
     final result = _ICU4XCodePointSetData_iter_ranges_complemented(_underlying);
-    return CodePointRangeIterator._(result);
+    return CodePointRangeIteratorImpl._(result);
   }
 
   // ignore: non_constant_identifier_names
@@ -10101,10 +10101,10 @@ class ICU4XScriptWithExtensions implements ffi.Finalizable {
   /// Get a list of ranges of code points that contain this script in their Script_Extensions values
   ///
   /// See the [Rust documentation for `get_script_extensions_ranges`](https://docs.rs/icu/latest/icu/properties/script/struct.ScriptWithExtensionsBorrowed.html#method.get_script_extensions_ranges) for more information.
-  CodePointRangeIterator iterRangesForScript(int script) {
+  CodePointRangeIteratorImpl iterRangesForScript(int script) {
     final result =
         _ICU4XScriptWithExtensions_iter_ranges_for_script(_underlying, script);
-    return CodePointRangeIterator._(result);
+    return CodePointRangeIteratorImpl._(result);
   }
 
   // ignore: non_constant_identifier_names
