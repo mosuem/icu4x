@@ -8,7 +8,8 @@ import 'dart:io';
 const linuxTargets = [
   Target.linuxArm,
   Target.linuxArm64,
-  Target.linuxIA32,
+  //TODO: Fix this target, it isn't working at the moment.
+  // Target.linuxIA32,
   // There's no stable linker for this target
   // Target.linuxRiscv32,
   Target.linuxRiscv64,
